@@ -15,7 +15,7 @@ Alles läuft offline auf deinem Handy, deine Sammlung bleibt auf deinem Gerät.
 - **Serien-Scan**: Karte für Karte auslösen, „+1“ legt sie ab, die Kamera ist sofort wieder bereit – ideal nach dem Booster-Öffnen.
 - **Sets mit Fortschritt**: Jedes Set als Kartenraster oder **Binder-Ansicht** (9er-Seiten), fehlende Karten grau. Filter: habe ich / fehlen / Parallel / Seltenheit.
 - **Schnell-Eingabe per Liste**: Nummern eintippen oder einfügen (`FB01-139`, `3x OP01-120`, `MEW 6`) – alle auf einmal hinzufügen.
-- **Cardmarket-Preise** (Dragon Ball, One Piece): unter jeder Karte im Set, oben der Wert deiner Karten. Aktualisieren mit `python3 tools/build_data.py`.
+- **Cardmarket-Preise** (Dragon Ball, One Piece): unter jeder Karte im Set, oben der Wert deiner Karten. **Aktuelle Preise** holst du im Set mit „Aktuelle Preise laden“ oder für alles unter Mehr › Sicherung & Export › „Alle Cardmarket-Preise aktualisieren“.
 - **Abhak-Modus**: Im Set einfach Karten antippen = +1, das „−“ an der Karte nimmt eine wieder raus, „Rückgängig“ nimmt die letzten Schritte zurück. So ist ein ganzes Set in Minuten eingetragen.
 - **Gegradete Karten**: PSA, BGS, CGC, TAG, SGC, ACE … mit Note, Zertifikatsnummer und eigenem Foto vom Slab. Der Scanner erkennt Grading-Etiketten oft automatisch.
 - **Pro Exemplar**: Anzahl, Version (Holo, Reverse, Foil …), Zustand (MT bis PO), Sprache, Kaufpreis, Kaufdatum, Wert, Lagerort (Binder, Box …), Notizen, eigene Fotos.
@@ -67,6 +67,12 @@ Kartenbilder werden beim Anschauen automatisch gespeichert. Ein ganzes Set holst
 ## 4. Sicherung – wichtig!
 
 Die Daten liegen nur auf dem Handy. Mach regelmäßig unter **Mehr › Sicherung & Export › Sicherung erstellen** eine Sicherung und speichere sie in iCloud Drive oder Google Drive. Die App erinnert dich, wenn die letzte Sicherung über 30 Tage alt ist.
+
+## Aktuelle Cardmarket-Preise
+
+Cardmarket erlaubt nicht, dass eine App die Preisliste direkt abruft. Deshalb holt ein kostenloser GitHub-Automatismus (**Actions › Cardmarket-Preise**) jeden Morgen gegen 5–6 Uhr die aktuelle Cardmarket-Preisliste und legt sie auf den Branch **`preise`**. Der Branch `main` bleibt dabei unberührt, es kommt also keine Update-Meldung.
+
+In der App: Set öffnen → **„Aktuelle Preise laden“**. Die App zeigt danach, wie sich der Wert deiner Karten verändert hat. Für alle Sets auf einmal: Mehr › Sicherung & Export › **„Alle Cardmarket-Preise aktualisieren“**. Sofort neue Preise holen: im Repository **Actions › Cardmarket-Preise › Run workflow**.
 
 ## 5. Updates
 

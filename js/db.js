@@ -152,6 +152,17 @@ export async function toggleWish(key, data = {}) {
   return true;
 }
 
+/** Viele Preise auf einmal speichern (eine Transaktion) */
+export async function setPrices(list) {
+  const m = await prices();
+  const at = Date.now();
+  const vals = list.map((p) => ({ ...p, at }));
+  vals.forEach((v) => m.set(v.key, v));
+  await db.putMany('prices', vals);
+  emit();
+  return vals.length;
+}
+
 export async function setPrice(key, p) {
   const m = await prices();
   const v = { key, ...p, at: Date.now() };

@@ -148,7 +148,70 @@ async function refreshOwned() {
 
 const keyOf = (c) => `${c.game}:${c.id}`;
 /** Preis als Text, "ab …" wenn Cardmarket nur Angebote, aber keine Verkäufe kennt */
-const priceText = (c) => { const v = marketPrice(c); return v == null ? '' : (c.eurLow && !priceMap.get(keyOf(c))?.eur ? 'ab ' : '') + money(v); };
+const priceText = (c) => {
+  const v = marketPrice(c);
+  if (v == null) return '';
+  const p = priceMap.get(keyOf(c));
+  const lowOnly = p?.eur != null ? !!p.lowOnly : !!c.eurLow;
+  return (lowOnly ? 'ab ' : '') + money(v);
+};
+/** Preisstand für eine Kartenliste: neuester geladener Stand, sonst der eingebaute */
+function priceDate(game, cards) {
+  let d = '';
+  for (const c of cards) { const p = priceMap.get(keyOf(c)); if (p?.date && p.date > d) d = p.date; }
+  return d || cat.pricesDate(game);
+}
+
+/* ---------- Aktuelle Cardmarket-Preise (täglich per GitHub Actions auf den Branch "preise") ---------- */
+function pricesBase() {
+  const h = location.hostname;
+  if (h.endsWith('.github.io')) {
+    const owner = h.split('.')[0];
+    const repo = location.pathname.split('/').filter(Boolean)[0];
+    if (repo) return `https://raw.githubusercontent.com/${owner}/${repo}/preise/`;
+  }
+  return 'https://raw.githubusercontent.com/Haramcan/TCG-Sammlung/preise/';
+}
+/** Lädt die aktuelle Preisliste und übernimmt sie für ein Set (setId) oder ein ganzes Spiel */
+async function updateCardmarketPrices(game, setId = null) {
+  if (!navigator.onLine) { toast('Dafür brauchst du Internet.'); return null; }
+  let data;
+  try {
+    const r = await fetch(`${pricesBase()}${game}.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status === 404 ? 'noch keine Preisliste vorhanden' : `HTTP ${r.status}`);
+    data = await r.json();
+  } catch (e) {
+    toast(`Preise konnten nicht geladen werden (${e.message}).`, { ms: 6000 });
+    return null;
+  }
+  await cat.load(game);
+  const cards = setId ? cat.setCards(game, setId) : cat.sets(game).flatMap((x) => cat.setCards(game, x.id));
+  const mineVal = () => cards.reduce((a, c) => a + (owned.has(keyOf(c)) ? (marketPrice(c) || 0) * ownedQty(c) : 0), 0);
+  const before = mineVal();
+  const list = [];
+  for (const c of cards) {
+    const v = data.p?.[c.id];
+    if (v == null) continue;
+    const [eur, low] = Array.isArray(v) ? v : [v, 0];
+    list.push({ key: keyOf(c), eur, lowOnly: !!low, date: data.d });
+  }
+  await store.setPrices(list);
+  priceMap = await store.prices();
+  const after = mineVal();
+  return { n: list.length, date: data.d, before, after };
+}
+async function runPriceUpdate(game, setId, label) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.dataset.keep = '1';
+  t.innerHTML = '<span class="spin" style="width:16px;height:16px;border-width:2px"></span> Lade aktuelle Cardmarket-Preise …';
+  $('#toastRoot').appendChild(t);
+  const r = await updateCardmarketPrices(game, setId);
+  t.remove();
+  if (!r) return null;
+  const diff = r.after - r.before;
+  toast(`${label}: ${r.n} Preise aktualisiert (Stand ${fmtDate(r.date)})${r.before || r.after ? ` · deine Karten ${money(r.before)} → ${money(r.after)}${Math.abs(diff) >= 0.01 ? ` (${diff > 0 ? '+' : ''}${money(diff)})` : ''}` : ''}`, { ms: 7000 });
+  return r;
+}
 /** Eingeblendete Spiele (Einstellungen) */
 const activeGames = () => { const a = GAME_IDS.filter((g) => (S.games || GAME_IDS).includes(g)); return a.length ? a : ['dbfw']; };
 /** Lädt die eingeblendeten Spiele und alle, von denen du Karten hast */
@@ -597,14 +660,15 @@ async function viewSet(game, setId, token) {
     const val = cards.reduce((a, c) => a + (owned.has(keyOf(c)) ? (marketPrice(c) || 0) * ownedQty(c) : 0), 0);
     const priced = cards.filter((c) => marketPrice(c) != null);
     const missVal = cards.reduce((a, c) => a + (!owned.has(keyOf(c)) && !c.par ? marketPrice(c) || 0 : 0), 0);
-    const pd = cat.pricesDate(game);
+    const pd = priceDate(game, cards);
     return `<div class="panel game-${game}" style="--gc:${GAMES[game].color}">
       <div class="row">${logo ? `<img src="${esc(logo)}" data-fb="${esc(cat.setLogoFallback(s))}" referrerpolicy="no-referrer" style="height:44px;max-width:120px;object-fit:contain" alt="">` : `<span class="set-code" style="width:64px;height:44px">${esc(cat.setCode(s))}</span>`}
         <div class="grow" style="flex:1;min-width:0"><b>${have} / ${cards.length}</b> <span class="muted small">gesammelt (${pct(have, cards.length)} %)</span>
         ${hasPar ? `<div class="muted small">Ohne Parallels: ${haveBase} / ${base.length}</div>` : ''}
         ${s.date ? `<div class="muted small">Erschienen ${fmtDate(s.date)}${s.official ? ` · ${s.official} offizielle Karten` : ''}</div>` : ''}
         ${priced.length ? `<div class="small" style="margin-top:4px">Wert deiner Karten: <b style="font-size:16px">${money(val)}</b></div>
-          <div class="muted tiny">Fehlende Karten ohne Parallels: ca. ${money(missVal)}${pd ? ` · Cardmarket, Stand ${fmtDate(pd)}` : ''}</div>` : ''}</div></div>
+          <div class="muted tiny">Fehlende Karten ohne Parallels: ca. ${money(missVal)}${pd ? ` · Cardmarket, Stand ${fmtDate(pd)}` : ''}</div>` : ''}
+        ${game !== 'pokemon' ? `<button class="btn sm" data-prices style="margin-top:8px">${icon.refresh} Aktuelle Preise laden</button>` : ''}</div></div>
       <div class="progress" style="margin-top:10px"><i style="width:${pct(have, cards.length)}%"></i></div>
     </div>`;
   };
@@ -621,6 +685,15 @@ async function viewSet(game, setId, token) {
       <button class="btn sm" id="tickUndo" disabled>↶ Rückgängig</button></div>` : ''}
     <div id="sgrid"></div>`;
   $('#shead').innerHTML = head();
+  // Preise aktualisieren (Knopf im Kopf des Sets)
+  $('#shead').addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-prices]');
+    if (!b) return;
+    b.disabled = true;
+    const r = await runPriceUpdate(game, setId, cat.setCode(s));
+    if (r && !stale(token)) viewSet(game, setId, routeToken);
+    else b.disabled = false;
+  });
   const tile = (c) => tileHTML(c, { markMissing: true, sub: `${cat.cardNo(c)}${c.r ? ' · ' + c.r : ''}`, price: priceText(c), minus: setState.tick });
   // Verlauf im Abhak-Modus: jede Aktion lässt sich zurücknehmen, auch mehrere hintereinander
   const tickHistory = [];
@@ -702,12 +775,19 @@ function setMenu(game, s) {
       <div class="item" data-a="missing">${icon.list}<div class="grow"><div class="title">Fehlende Karten teilen</div><div class="sub">Liste als Text – z. B. für Tauschpartner</div></div></div>
       <div class="item" data-a="wishall">${icon.heart}<div class="grow"><div class="title">Alle fehlenden auf die Wunschliste</div></div></div>
       <div class="item" data-a="offline">${icon.download}<div class="grow"><div class="title">Bilder für offline speichern</div><div class="sub">Lädt alle Kartenbilder dieses Sets aufs Gerät</div></div></div>
-      ${game === 'pokemon' ? `<div class="item" data-a="prices">${icon.refresh}<div class="grow"><div class="title">Preise meiner Karten laden</div><div class="sub">Cardmarket-Preise über TCGdex (Internet)</div></div></div>` : ''}
+      ${game === 'pokemon' ? `<div class="item" data-a="prices">${icon.refresh}<div class="grow"><div class="title">Preise meiner Karten laden</div><div class="sub">Cardmarket-Preise über TCGdex (Internet)</div></div></div>`
+        : `<div class="item" data-a="cmprices">${icon.refresh}<div class="grow"><div class="title">Aktuelle Cardmarket-Preise laden</div><div class="sub">Für alle Karten dieses Sets (Internet)</div></div></div>`}
       <div class="item" data-a="cm">${icon.tag}<div class="grow"><div class="title">Set bei Cardmarket öffnen</div></div></div>
     </div>`;
     body.querySelectorAll('[data-a]').forEach((it) => (it.onclick = async () => {
       const a = it.dataset.a;
       const cards = cat.setCards(game, s.id);
+      if (a === 'cmprices') {
+        close();
+        const r = await runPriceUpdate(game, s.id, cat.setCode(s));
+        if (r) route();
+        return;
+      }
       if (a === 'missing') {
         const miss = cards.filter((c) => !owned.has(keyOf(c)));
         const text = `Mir fehlen aus ${cat.setCode(s)} ${cat.setName(s)} (${miss.length}):\n` + miss.map((c) => `${cat.cardNo(c)} ${cat.cardName(c)}${c.r ? ` [${c.r}]` : ''}`).join('\n');
@@ -817,7 +897,8 @@ async function viewCard(game, id, token) {
         <div>
           <h3>Preis</h3>
           <div class="price-box" id="pbox">
-            ${c.eur != null ? `<div class="stat"><b>${c.eurLow ? 'ab ' : ''}${money(c.eur)}</b><span>${c.eurLow ? 'Cardmarket, günstigstes Angebot' : 'Cardmarket Trend'}${cat.pricesDate(c.game) ? ` · ${fmtDate(cat.pricesDate(c.game))}` : ''}</span></div>` : ''}
+            ${p?.eur != null && p.date ? `<div class="stat"><b>${p.lowOnly ? 'ab ' : ''}${money(p.eur)}</b><span>${p.lowOnly ? 'Cardmarket, günstigstes Angebot' : 'Cardmarket Trend'} · ${fmtDate(p.date)}</span></div>` : ''}
+            ${c.eur != null && !(p?.eur != null && p.date) ? `<div class="stat"><b>${c.eurLow ? 'ab ' : ''}${money(c.eur)}</b><span>${c.eurLow ? 'Cardmarket, günstigstes Angebot' : 'Cardmarket Trend'}${cat.pricesDate(c.game) ? ` · ${fmtDate(cat.pricesDate(c.game))}` : ''}</span></div>` : ''}
             ${c.usd != null ? `<div class="stat"><b>$${c.usd.toFixed(2)}</b><span>TCGplayer Markt (≈ ${money(c.usd * S.usdRate)})</span></div>` : ''}
             ${p?.trend != null ? `<div class="stat"><b>${money(p.trend)}</b><span>Cardmarket Trend</span></div>` : ''}
             ${p?.avg30 != null ? `<div class="stat"><b>${money(p.avg30)}</b><span>Ø 30 Tage</span></div>` : ''}
@@ -1598,6 +1679,7 @@ async function viewBackup() {
     <div class="list" id="dbinfo"></div>
     <div class="row wrap" style="margin-top:10px">
       <button class="btn" data-a="pkupdate">${icon.refresh} Neue Pokémon-Sets online suchen</button>
+      <button class="btn" data-a="cmall">${icon.refresh} Alle Cardmarket-Preise aktualisieren</button>
       <button class="btn" data-a="pkprices">${icon.refresh} Pokémon-Preise meiner Karten</button>
       <button class="btn" data-a="ocr">${icon.download} Scanner offline vorbereiten</button>
     </div>
@@ -1645,6 +1727,10 @@ async function viewBackup() {
         toast(r.sets ? `${r.sets} neue Sets, ${r.cards} Karten ergänzt` : 'Alles aktuell');
       } catch (e) { toast('Fehler: ' + e.message); }
       viewBackup();
+    } else if (a === 'cmall') {
+      b.disabled = true;
+      for (const g of activeGames().filter((x) => x !== 'pokemon')) await runPriceUpdate(g, null, GAMES[g].short);
+      b.disabled = false;
     } else if (a === 'pkprices') {
       await cat.load('pokemon');
       const cards = [...owned.keys()].filter((k) => k.startsWith('pokemon:')).map((k) => cat.getCard('pokemon', k.slice(8))).filter(Boolean);
