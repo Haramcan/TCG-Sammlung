@@ -1,0 +1,38 @@
+# Holt jeden Morgen die aktuelle Cardmarket-Preisliste und legt sie auf den Branch "preise".
+# Die App lädt sie von dort, wenn du in einem Set auf "Aktuelle Preise laden" tippst.
+# Der Branch main wird dabei nicht verändert.
+name: Cardmarket-Preise
+
+on:
+  schedule:
+    - cron: "17 4 * * *"   # täglich ca. 5:17 / 6:17 Uhr deutscher Zeit
+  workflow_dispatch:        # zusätzlich per Hand: Actions › Cardmarket-Preise › Run workflow
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preise
+  cancel-in-progress: true
+
+jobs:
+  preise:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preisliste laden
+        run: python3 tools/build_prices.py out
+
+      - name: Auf Branch "preise" veröffentlichen
+        run: |
+          cd out
+          git init -q -b preise
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Cardmarket-Preise $(date -u +%Y-%m-%d)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" preise
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
