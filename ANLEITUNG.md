@@ -1,0 +1,88 @@
+# TCG Sammlung – Anleitung
+
+Deine Sammel-App für **Dragon Ball Super Fusion World**, **One Piece Card Game** und **Pokémon TCG**.
+Sie ist eine eigene App und hat nichts mit Stashly zu tun – eigene Adresse, eigenes Symbol, eigene Daten.
+Alles läuft offline auf deinem Handy, deine Sammlung bleibt auf deinem Gerät.
+
+## Was drin ist
+
+- **Komplette Kartendatenbanken** (Stand 01.11.2026)
+  - Dragon Ball Fusion World: 31 Sets, 4.365 Karten – FB01 bis FB11, Manga Booster SB01/SB02, Story Booster ST01, alle Starter Decks FS01–FS12, Promos und Release-Event-Packs, inkl. aller Parallel-Versionen
+  - One Piece: 61 Sets, 4.945 Karten – OP-01 bis OP-17, EB-01 bis EB-05, PRB-01/02, alle Starter Decks ST-01 bis ST-36, Promos, inkl. Parallels und Reprints
+  - Pokémon: 205 Sets, 21.256 Karten – von Base Set bis Mega-Entwicklung, mit deutschen Namen
+  - Zu jeder Karte das offizielle Kartenbild, Nummer, Seltenheit, Typ und Farbe
+- **Scanner**: Karte fotografieren → die App liest die Kartennummer (z. B. `FB01-139`, `OP05-119`, `025/165`) und den Namen und schlägt die Karte vor. Komplett offline, ohne KI-Dienst.
+- **Serien-Scan**: Karte für Karte auslösen, „+1“ legt sie ab, die Kamera ist sofort wieder bereit – ideal nach dem Booster-Öffnen.
+- **Sets mit Fortschritt**: Jedes Set als Kartenraster oder **Binder-Ansicht** (9er-Seiten), fehlende Karten grau. Filter: habe ich / fehlen / Parallel / Seltenheit.
+- **Schnell-Eingabe per Liste**: Nummern eintippen oder einfügen (`FB01-139`, `3x OP01-120`, `MEW 6`) – alle auf einmal hinzufügen.
+- **Cardmarket-Preise** (Dragon Ball, One Piece): unter jeder Karte im Set, oben der Wert deiner Karten. Aktualisieren mit `python3 tools/build_data.py`.
+- **Abhak-Modus**: Im Set einfach Karten antippen = +1, das „−“ an der Karte nimmt eine wieder raus, „Rückgängig“ nimmt die letzten Schritte zurück. So ist ein ganzes Set in Minuten eingetragen.
+- **Gegradete Karten**: PSA, BGS, CGC, TAG, SGC, ACE … mit Note, Zertifikatsnummer und eigenem Foto vom Slab. Der Scanner erkennt Grading-Etiketten oft automatisch.
+- **Pro Exemplar**: Anzahl, Version (Holo, Reverse, Foil …), Zustand (MT bis PO), Sprache, Kaufpreis, Kaufdatum, Wert, Lagerort (Binder, Box …), Notizen, eigene Fotos.
+- **Preise**: One Piece mit TCGplayer-Marktpreisen, Pokémon-Preise von Cardmarket per Knopfdruck (online), dazu Links zu Cardmarket und „eBay verkauft“ für jede Karte.
+- **Binder**: Lieblingskarten in eigene Ledermappen legen (9er-Seiten zum Blättern, Glanz-Effekt), dazu automatisch „Teuerste Karten“ und „Gegradet“ – gegradete Karten erscheinen als Slab mit Etikett und Note.
+- **Wunschliste**, **Tauschliste** (doppelte Karten), **Statistik** (Gesamtwert, Gewinn/Verlust, wertvollste Karten, Set-Fortschritt), **Suche** über alle 30.000 Karten.
+- **Sicherung** als Datei (mit Fotos) und **CSV-Export** für Excel.
+- **Optional KI-Erkennung** mit eigenem Claude-API-Schlüssel: erkennt auch mehrere Karten auf einem Foto (z. B. eine ganze Binder-Seite) und Slabs.
+
+## Nur Dragon Ball (Start-Einstellung)
+
+Die App startet mit **Dragon Ball Fusion World**. One Piece und Pokémon sind schon fertig in der App, aber ausgeblendet. Einblenden: **Mehr › Einstellungen › Angezeigte Spiele**. Ausgeblendete Spiele werden gar nicht erst geladen, dadurch startet die App schneller.
+
+## Neue Sets und Karten per Foto
+
+Erscheint ein neues Set (z. B. FB12), das noch nicht in der Datenbank ist:
+
+1. Karte ganz normal scannen.
+2. Die App meldet **„Neue Karte entdeckt: FB12-001“** → **neu anlegen** tippen.
+3. Name eintragen (Vorschläge aus dem Foto antippen), Seltenheit wählen, fertig.
+
+Das Set wird automatisch angelegt. Bei Dragon Ball sucht die App dabei selbst nach dem offiziellen Kartenbild, sonst wird dein Foto verwendet. Ab dann wird die Karte beim Scannen sofort erkannt. Das geht auch über **Mehr › Neue Karte in die Datenbank**, über die Suche und die Schnell-Eingabe. Selbst angelegte Karten sind in der Sicherung enthalten.
+
+## 1. App online stellen (einmalig) – wie bei Stashly über GitHub Pages
+
+Die App hat ein **eigenes GitHub-Repository**, getrennt von Stashly. GitHub Pages stellt sie kostenlos unter einer festen Adresse bereit:
+
+1. Auf GitHub ein neues Repository anlegen, z. B. **`TCG-Sammlung`**: **Public**, Haken bei **„Add a README file“**.
+2. Claude legt die App auf einem eigenen Branch an und öffnet einen **Pull Request**. Du klickst **„Merge pull request“**.
+3. Einmalig: Im Repository **Settings › Pages** öffnen. Unter *Build and deployment* bei **Source: Deploy from a branch** den Branch **`main`** und den Ordner **`/ (root)`** wählen und **Save** drücken.
+4. Nach etwa einer Minute ist die App erreichbar unter **`https://haramcan.github.io/TCG-Sammlung/`**. **Die Adresse danach nicht mehr ändern**: Deine Daten gehören auf dem Handy fest zu ihr. Benenne das Repository deshalb auch nicht mehr um.
+
+## 2. Aufs Handy installieren
+
+- **iPhone**: Adresse in **Safari** öffnen → **Teilen** → **Zum Home-Bildschirm**. Danach immer über das neue Symbol starten.
+- **Android**: Adresse in **Chrome** öffnen → Menü (⋮) → **App installieren** bzw. **Zum Startbildschirm hinzufügen**.
+
+Beim ersten Start einmal im WLAN unter **Mehr › Sicherung & Export › Scanner offline vorbereiten** tippen (lädt die Texterkennung, ca. 11 MB). Danach brauchst du für den Scanner kein Internet mehr.
+
+Kartenbilder werden beim Anschauen automatisch gespeichert. Ein ganzes Set holst du über **Set öffnen › Regler-Symbol › Bilder für offline speichern**.
+
+## 3. Tipps zum Scannen
+
+- Karte gerade und formatfüllend in den Rahmen, gutes Licht, keine Spiegelung (Hülle/Toploader möglichst schräg zum Licht halten).
+- Oben das Spiel auswählen (Dragon Ball / One Piece / Pokémon) – das macht die Erkennung schneller und genauer.
+- Bei Parallel-Versionen zeigt die App alle Versionen mit derselben Nummer nebeneinander – tippe die richtige an.
+- Nicht erkannt? Im Ergebnis einfach Name oder Nummer eintippen.
+
+## 4. Sicherung – wichtig!
+
+Die Daten liegen nur auf dem Handy. Mach regelmäßig unter **Mehr › Sicherung & Export › Sicherung erstellen** eine Sicherung und speichere sie in iCloud Drive oder Google Drive. Die App erinnert dich, wenn die letzte Sicherung über 30 Tage alt ist.
+
+## 5. Updates
+
+Genau wie bei Stashly: Claude arbeitet auf einem eigenen Branch und öffnet einen **Pull Request**. Sobald du ihn auf GitHub **mergst**, veröffentlicht GitHub Pages die neue Version automatisch. Die App auf dem Handy zeigt dann **„Neue Version verfügbar“** → **Neu laden**. Deine Sammlung bleibt dabei erhalten.
+
+- **Pokémon**: Neue Sets holt die App auch selbst: **Mehr › Sicherung & Export › Neue Pokémon-Sets online suchen**.
+- **Dragon Ball / One Piece und Preise**: Die Datenbank wird mit `python3 tools/build_data.py` neu von den offiziellen Kartenlisten und der Cardmarket-Preisliste geladen (das erledigt Claude beim Update).
+
+## Zum Testen am PC
+
+Im Ordner `python3 -m http.server 8080` starten und `http://localhost:8080` öffnen.
+
+## Datenquellen
+
+- Dragon Ball Super Card Game Fusion World: offizielle Kartenliste dbs-cardgame.com/fw
+- One Piece Card Game: offizielle Kartenliste en.onepiece-cardgame.com, Bilder und Preise (TCGplayer) von optcgapi.com – die offizielle Seite erlaubt das Einbetten ihrer Bilder in andere Seiten nicht
+- Pokémon TCG: TCGdex (tcgdex.dev), Preise von Cardmarket über TCGdex
+
+Kartenbilder und Namen gehören den jeweiligen Rechteinhabern (Bandai, Toei, Shueisha, Bird Studio, The Pokémon Company, Nintendo). Diese App ist ein privates Sammlerwerkzeug und keine offizielle App.
